@@ -79,6 +79,7 @@ pre{margin:0;white-space:pre-wrap;word-break:break-all}
   <div><div class="row"><span class="omega">Ω</span><h1>VectorEngine v4.2 / RAG Playground</h1></div>
   <p class="sub">Step-by-step pipeline: semantic vector DB retrieval + structured Python validation</p></div>
   <div class="stats mono">
+    <button id="wipe" title="Delete everything saved in this browser">Clear saved data</button>
     <button class="warn" id="refresh" title="Reset schema, query and JSON to defaults">&#9888; Forced Sync &amp; Re-render</button>
     <div class="stat"><span class="lbl">Chroma DB Chunks</span><b id="st-chunks" style="color:#2563eb">0</b></div>
     <div class="stat"><span class="lbl">BaseModel Size</span><b id="st-attrs" style="color:#dc2626">0 attrs</b></div>
@@ -258,6 +259,9 @@ async function embed(texts){return texts.map(localEmbed)}
 const S={docs:clone(SAMPLE_DOCS),chunks:[],schemas:clone(PRESETS),active:"UserAccount",size:180,overlap:40,query:"",qvec:null,
   results:[],sel:[],json:"",report:{isValid:true,errors:[]},logs:[],activeLog:null,flow:"idle",running:false,sim:false,
   loading:false,indexed:false,version:"",api:false,build:0,selDoc:"doc-1",ragInit:false};
+const KEY="py-app-v1";
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d)Object.assign(S,d);S.activeLog=S.logs[0]?.id||null}catch{}}
+let svT;function save(){clearTimeout(svT);svT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify({docs:S.docs,schemas:S.schemas,active:S.active,size:S.size,overlap:S.overlap,json:S.json,query:S.query,sim:S.sim,rq:$("#rq").value,logs:S.logs.filter(l=>["success","corrected","validation_error"].includes(l.status)).slice(0,20)}))}catch{}},300)}
 const schema=()=>S.schemas.find(s=>s.name===S.active)||S.schemas[0];
 const stamp=()=>`v-${S.active}-${S.chunks.length}-${Date.now().toString(36)}`;
 
@@ -319,7 +323,7 @@ async function runSearch(q){
 }
 
 /* ---------- render: header ---------- */
-function renderStats(){
+function renderStats(){save();
   $("#st-chunks").textContent=S.chunks.length;
   $("#st-attrs").textContent=schema().fields.length+" attrs";
   const v=$("#st-val");v.textContent=S.report.isValid?"Ready":"Trace!";
@@ -329,7 +333,7 @@ function renderStats(){
 
 /* ---------- render: chroma ---------- */
 const dotColor=id=>id.includes("doc-2")||id.includes("doc-4")?"#f43f5e":id.includes("doc-3")?"#8b5cf6":"#10b981";
-function renderChroma(){
+function renderChroma(){save();
   $("#cs").value=S.size;$("#co").value=S.overlap;$("#cs-v").textContent=S.size;$("#co-v").textContent=S.overlap;
   if(!S.docs.some(d=>d.id===S.selDoc))S.selDoc=S.docs[0]?.id;
   $("#doc-count").textContent=`Active documents (${S.docs.length})`;
@@ -409,7 +413,7 @@ function renderFlow(){
   $("#flow").innerHTML=[["retrieve","Chroma Retrieve"],["synthesize","LLM Generate"],["validate","Pydantic Check"],["correct","Correction Loop"],["done","Finished"]].map(([k,l])=>`<div class="${S.flow===k?"a":""}">${l}</div>`).join("");
 }
 const BADGE={success:["Passed","#d1fae5"],corrected:["Healed","#fef3c7"],validation_error:["Err","#fee2e2"],synthesizing:["Run...","#f3e8ff"],searching:["searching","#fff"]};
-function renderLogs(){
+function renderLogs(){save();
   if(!S.logs.length){$("#logs").innerHTML=`<div class="empty"><b>PIPELINE LOGS EMPTY</b><br>Run a prompt to compile and validate live logs</div>`;return}
   const a=S.logs.find(l=>l.id===S.activeLog);
   $("#logs").innerHTML=S.logs.map(l=>{const [t,bg]=BADGE[l.status],on=l.id===S.activeLog;
@@ -494,11 +498,12 @@ $("#add-field").onsubmit=e=>{e.preventDefault();
 $("#b-ok").onclick=loadPassing;
 $("#b-bad").onclick=()=>setJson(JSON.stringify(buildObj(BAD,()=>null),null,2));
 $("#json").oninput=e=>{S.json=e.target.value;revalidate()};
-$("#rq").oninput=renderPrompt;
-$("#sim").onchange=e=>S.sim=e.target.checked;
+$("#rq").oninput=()=>{renderPrompt();save()};
+$("#sim").onchange=e=>{S.sim=e.target.checked;save()};
 $("#run").onclick=runRag;
 $("#logs").onclick=e=>{const l=e.target.closest("[data-log]");if(l){S.activeLog=l.dataset.log;renderLogs()}};
 $("#clear").onclick=()=>{S.logs=[];S.activeLog=null;S.flow="idle";renderFlow();renderLogs()};
+$("#wipe").onclick=()=>{if(confirm("Delete saved documents, schemas and logs from this browser?")){try{localStorage.removeItem(KEY)}catch{}location.reload()}};
 $("#refresh").onclick=async()=>{
   const p=clone(PRESETS.find(x=>x.name==="KnowledgeChunk"));
   S.schemas=S.schemas.map(s=>s.name===p.name?p:s);S.active=p.name;S.sel=[];
@@ -509,8 +514,11 @@ $("#refresh").onclick=async()=>{
 };
 
 /* ---------- boot ---------- */
-renderChroma();renderPydantic();renderFlow();renderLogs();renderRagLocks();loadPassing();renderPrompt();
-$("#rq").value=DEFAULTS.UserAccount[0];renderPrompt();rebuild();
+load();
+$("#rq").value=S.rq||DEFAULTS[S.active]?.[0]||DEFAULTS.UserAccount[0];$("#q").value=S.query||"";$("#sim").checked=!!S.sim;
+renderChroma();renderPydantic();renderFlow();renderLogs();renderRagLocks();
+if(S.json)setJson(S.json);else loadPassing();
+renderPrompt();rebuild();
 </script>
 </body>
 </html>
