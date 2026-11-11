@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pydantic ChromaDB LLM Playground</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#141414;--bg:#E4E3E0;--pale:#F5F5F3;--sh:4px 4px 0 var(--ink);--sh2:2px 2px 0 var(--ink)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.5 Inter,system-ui,sans-serif;padding:24px 16px}
+.wrap{max-width:1280px;margin:0 auto;display:grid;gap:20px}
+.mono,code,pre,input,textarea,select,button{font-family:'JetBrains Mono',ui-monospace,monospace}
+.box{background:#fff;border:2px solid var(--ink);box-shadow:var(--sh);padding:18px;min-width:0}
+.hd{display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:12px;justify-content:space-between}
+h1,h3,h4{margin:0;font-weight:900;text-transform:uppercase;letter-spacing:-.01em}
+h1{font-size:20px}h3{font-size:14px}h4{font-size:12px}
+.lbl{font:700 9px 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:#14141499;display:block;margin-bottom:4px}
+.sub{font:600 10px 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.06em;color:#14141499;margin:4px 0 0}
+header{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center}
+.stats{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.stat{border:2px solid var(--ink);padding:4px 12px;box-shadow:var(--sh2);min-width:90px;background:#fff}
+.stat b{display:block;font:700 12px 'JetBrains Mono',monospace}
+.omega{display:inline-grid;place-items:center;width:28px;height:28px;background:var(--ink);color:#fff;font-weight:900}
+button{border:2px solid var(--ink);background:#fff;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:var(--sh2);text-transform:uppercase;letter-spacing:.04em}
+button:hover:not(:disabled){transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+button.on,button.pri{background:var(--ink);color:#fff}
+button.on{box-shadow:none}
+button.warn{background:#fef3c7}
+button:disabled{background:#e4e4e7;color:#a1a1aa;border-color:#d4d4d8;box-shadow:none;cursor:not-allowed}
+button.ghost{border:0;box-shadow:none;background:none;padding:4px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;background:var(--pale);padding:6px;border:2px solid var(--ink);box-shadow:var(--sh)}
+.tabs button{flex:1;min-width:200px;padding:10px}
+input,textarea,select{border:1px solid var(--ink);padding:7px 9px;font-size:12px;background:#fff;width:100%;border-radius:0}
+input[type=range]{padding:0;accent-color:var(--ink)}input[type=checkbox]{width:auto}
+textarea{resize:vertical;background:var(--pale)}
+:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+.g12{display:grid;grid-template-columns:repeat(12,1fr);gap:20px}
+.c4{grid-column:span 4}.c8{grid-column:span 8}.c6{grid-column:span 6}
+@media(max-width:1000px){.c4,.c8,.c6{grid-column:span 12}}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.row{display:flex;gap:8px;align-items:center}
+.pale{background:var(--pale);border:1px solid var(--ink);padding:8px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:1px solid #14141433;background:#fff;box-shadow:1px 1px 0 var(--ink);cursor:pointer;margin-bottom:6px}
+.item.sel{background:var(--ink);color:#fff;box-shadow:none;border-color:var(--ink)}
+.item .t{font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item small{font:600 9px 'JetBrains Mono',monospace;text-transform:uppercase;opacity:.65;display:block}
+.scroll{overflow:auto;scrollbar-width:thin}
+.tag{font:900 9px 'JetBrains Mono',monospace;padding:1px 6px;text-transform:uppercase;border:1px solid var(--ink);background:#fff}
+.tag.k{background:var(--ink);color:#fff}
+.dark{background:var(--ink);color:#d4d4d8;font:11px/1.6 'JetBrains Mono',monospace}
+pre{margin:0;white-space:pre-wrap;word-break:break-all}
+.code{padding:12px;height:210px;overflow:auto;white-space:pre}
+.code .ln{display:inline-block;width:22px;color:#52525b;user-select:none}
+.k{color:#fb7185;font-weight:700;font-style:normal}.f{color:#4ade80;font-style:normal}.p{color:#c084fc;font-style:normal}
+.plot{position:relative;height:290px;background:var(--ink);border:2px solid var(--ink)}
+.plot svg{position:absolute;inset:0;width:100%;height:100%}
+.legend{position:absolute;right:8px;bottom:8px;display:flex;gap:10px;background:var(--ink);border:1px solid #fff3;padding:4px 8px;font:9px 'JetBrains Mono',monospace;color:#d4d4d8}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
+.ch{display:inline-block;margin:2px;padding:1px 6px;border:1px solid;font:700 10px 'JetBrains Mono',monospace}
+.ch0{background:#10b9811a;color:#065f46;border-color:#10b9814d}.ch1{background:#06b6d41a;color:#155e75;border-color:#06b6d44d}.ch2{background:#a855f71a;color:#6b21a8;border-color:#a855f74d}.ch3{background:#0ea5e91a;color:#075985;border-color:#0ea5e94d}.ch4{background:#d946ef1a;color:#86198f;border-color:#d946ef4d}
+.empty{border:2px dashed #14141440;background:var(--pale);padding:20px 12px;text-align:center;font:600 10px 'JetBrains Mono',monospace;color:#14141499}
+.ok{background:#ecfdf5;border:2px solid #10b981;box-shadow:2px 2px 0 #10b981;padding:12px}
+.bad{background:#fef2f2;border:2px solid #ef4444;box-shadow:2px 2px 0 #f43f5e;padding:12px}
+.amber{background:#fffbeb;border:2px solid #f59e0b;box-shadow:2px 2px 0 #d97706;padding:12px}
+.sync{background:#F3F4F6;border:2px solid var(--ink);box-shadow:var(--sh2);padding:12px}
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+@media(max-width:700px){.flow{grid-template-columns:repeat(2,1fr)}}
+.flow div{border:2px solid #14141426;padding:8px 4px;text-align:center;font:700 9px 'JetBrains Mono',monospace;text-transform:uppercase;color:#a1a1aa}
+.flow div.a{border-color:var(--ink);color:var(--ink);box-shadow:var(--sh2)}
+.hidden{display:none}
+.spin,.pulse{animation:p 1s infinite}@keyframes p{50%{opacity:.35}}
+@media(prefers-reduced-motion:reduce){.spin,.pulse{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="box">
+  <div><div class="row"><span class="omega">Ω</span><h1>VectorEngine v4.2 / RAG Playground</h1></div>
+  <p class="sub">Step-by-step pipeline: semantic vector DB retrieval + structured Python validation</p></div>
+  <div class="stats mono">
+    <button class="warn" id="refresh" title="Reset schema, query and JSON to defaults">&#9888; Forced Sync &amp; Re-render</button>
+    <div class="stat"><span class="lbl">Chroma DB Chunks</span><b id="st-chunks" style="color:#2563eb">0</b></div>
+    <div class="stat"><span class="lbl">BaseModel Size</span><b id="st-attrs" style="color:#dc2626">0 attrs</b></div>
+    <div class="stat"><span class="lbl">Client Validator</span><b id="st-val">Ready</b></div>
+  </div>
+</header>
+
+<div class="box" style="font-size:11px">
+  <h4 style="margin-bottom:6px">How these three pillars interact in production</h4>
+  <p style="margin:2px 0">1. <b>ChromaDB</b> breaks documents into overlapping <b style="color:#2563eb">vector chunks</b> and runs a similarity search for your query.</p>
+  <p style="margin:2px 0">2. <b>LLM (Gemini)</b> synthesizes the retrieved chunks, constrained by a rigid schema.</p>
+  <p style="margin:2px 0">3. <b>Pydantic</b> validates the JSON. On a <b style="color:#dc2626">ValidationError</b>, a self-correction loop retries with the error trace.</p>
+</div>
+
+<div class="tabs" role="tablist">
+  <button data-tab="chroma" class="on">1. ChromaDB Vector Space</button>
+  <button data-tab="pydantic">2. Pydantic BaseModel Validation</button>
+  <button data-tab="rag">3. Unified RAG Executor Loop</button>
+</div>
+
+<!-- TAB 1 -->
+<section id="tab-chroma" class="g12">
+  <div class="box c4 col">
+    <div class="hd"><h3>ChromaDB Store</h3><span class="tag k" id="mode">...</span></div>
+    <div><span class="lbl" id="doc-count"></span><div id="docs" class="pale scroll" style="max-height:210px"></div></div>
+    <form id="add-doc" class="pale" style="display:grid;gap:8px;box-shadow:var(--sh2);border-width:2px">
+      <span class="lbl" style="margin:0">Add custom knowledge chunk</span>
+      <input id="nd-t" placeholder="e.g. ChromaDB Guidelines" required>
+      <textarea id="nd-c" rows="3" placeholder="Knowledge context string..." required style="background:#fff"></textarea>
+      <div class="row"><select id="nd-k"><option value="docs">DOCUMENT</option><option value="qna">FAQ RESPONSE</option><option value="code">CODE BLOCK</option></select><button class="pri" type="submit">Insert</button></div>
+    </form>
+    <div style="border-top:2px solid var(--ink);padding-top:12px">
+      <span class="lbl">Document chunker config</span>
+      <div class="row mono" style="justify-content:space-between;font-size:10px"><span>SIZE: <b id="cs-v"></b> chars</span><span>OVERLAP: <b id="co-v"></b> chars</span></div>
+      <input type="range" id="cs" min="50" max="500" step="10" aria-label="Chunk size" style="margin-top:6px">
+      <input type="range" id="co" min="0" max="200" step="5" aria-label="Chunk overlap" style="accent-color:#7e22ce">
+    </div>
+  </div>
+  <div class="c8 col">
+    <div class="box" id="tracer-box">
+      <h4 style="margin-bottom:8px">Chunk separation tracer: <span id="tr-title" style="color:#2563eb"></span></h4>
+      <div id="tracer" class="pale scroll" style="max-height:112px"></div>
+      <p class="sub" style="text-transform:none">Hover bands to inspect overlaps. Each band is indexed as a standalone embedding.</p>
+    </div>
+    <div class="box">
+      <div class="hd" style="flex-wrap:wrap">
+        <div><span class="lbl" style="margin:0">Embedding projection space</span><h3 style="font-size:13px">ChromaDB Vector Index Map</h3></div>
+        <input id="q" placeholder="Query ChromaDB (e.g. validate Email)" style="max-width:300px;box-shadow:var(--sh2)" aria-label="Search query">
+      </div>
+      <div class="g12" style="gap:16px">
+        <div class="c8"><div class="plot"><svg id="plot" viewBox="0 0 100 100" role="img" aria-label="2D projection of chunk embeddings"></svg>
+          <div class="legend"><span><i class="dot" style="background:#34d399"></i>ChromaDB Docs</span><span><i class="dot" style="background:#fb7185"></i>Pydantic Rules</span><span><i class="dot" style="background:#a78bfa"></i>LLM Logic</span><span id="lg-q" class="hidden"><i class="dot" style="background:#38bdf8"></i>Query</span></div></div></div>
+        <div class="c4"><span class="lbl">Retrieval n-results matches</span><div id="matches" class="scroll" style="max-height:290px"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TAB 2 -->
+<section id="tab-pydantic" class="g12 hidden">
+  <div class="box c6">
+    <div class="hd" style="flex-wrap:wrap"><h3>Pydantic BaseModels</h3><div class="row pale" id="presets" style="flex-wrap:wrap;padding:4px"></div></div>
+    <p style="font-size:11px;margin:0 0 10px;opacity:.75">Add and edit fields to see types and validations change instantly.</p>
+    <div id="fields" class="scroll" style="max-height:230px"></div>
+    <form id="add-field" style="border-top:2px solid var(--ink);margin-top:14px;padding-top:12px;display:grid;gap:10px">
+      <span class="lbl" style="margin:0">Add custom BaseModel attribute</span>
+      <div class="row"><div style="flex:1"><label class="lbl" for="nf-n">Field name</label><input id="nf-n" placeholder="e.g. phone_number" required></div>
+      <div style="flex:1"><label class="lbl" for="nf-t">Data type</label><select id="nf-t"><option value="string">str</option><option value="integer">int</option><option value="number">float</option><option value="boolean">bool</option><option value="array_string">list[str]</option></select></div></div>
+      <div><label class="lbl" for="nf-d">Field description</label><input id="nf-d" placeholder="What this field collects or validates"></div>
+      <div class="row" id="nf-cons"></div>
+      <label class="row mono" style="font-size:10px;font-weight:700"><input type="checkbox" id="nf-r" checked> REQUIRED</label>
+      <button class="pri" type="submit">Add field to schema</button>
+    </form>
+  </div>
+  <div class="c6 col">
+    <div class="dark box" style="padding:0;background:var(--ink)">
+      <div class="row" style="justify-content:space-between;padding:6px 14px;background:#1c1c1c"><span style="font-weight:700">models.py</span><span class="tag">pydantic v2</span></div>
+      <div class="code" id="py"></div>
+    </div>
+    <div class="box">
+      <div class="hd" style="flex-wrap:wrap"><h4>Validation parser sandbox</h4>
+        <div class="row"><button id="b-bad" style="background:#fee2e2;border-color:#ef4444;font-size:9px">Inject broken JSON</button><button id="b-ok" style="background:#d1fae5;border-color:#10b981;font-size:9px">Load passing JSON</button></div></div>
+      <textarea id="json" rows="6" spellcheck="false" aria-label="JSON input"></textarea>
+      <div id="report" style="margin-top:10px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- TAB 3 -->
+<section id="tab-rag" class="col hidden">
+  <div id="sync"></div>
+  <div class="g12">
+    <div class="box c8 col">
+      <div class="hd" style="flex-wrap:wrap"><h3>RAG Prompt Compiler</h3>
+        <label class="row mono" style="font-size:9px;font-weight:700;text-transform:uppercase"><input type="checkbox" id="sim"> Simulate parser fail first</label></div>
+      <div><label class="lbl" for="rq">Query / objective instruction</label><input id="rq" style="box-shadow:var(--sh2)"></div>
+      <div><span class="lbl">Assembled RAG LLM message preview</span><div id="prompt" class="dark scroll" style="height:200px;padding:12px;border:2px solid var(--ink)"></div></div>
+      <button id="run" class="pri" style="padding:12px;box-shadow:var(--sh)"></button>
+      <div style="border-top:2px solid var(--ink);padding-top:12px"><span class="lbl">Real-time pipeline synchronization flow</span><div class="flow" id="flow"></div></div>
+    </div>
+    <div class="box c4 col">
+      <div class="hd"><h4>Execution logs</h4><button class="ghost" id="clear">Clear</button></div>
+      <div id="logs" class="scroll" style="max-height:520px"></div>
+    </div>
+  </div>
+</section>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const PY={string:"str",integer:"int",number:"float",boolean:"bool",array_string:"list[str]",array_integer:"list[int]"};
+
+const SAMPLE_DOCS=[
+{id:"doc-1",title:"ChromaDB Quickstart Guidelines",category:"docs",content:"ChromaDB is an AI-native open-source vector database. It supports querying embeddings, adding user metadata, and filtering results. Chunks of documents are mapped into embeddings using models like gemini-embedding-2-preview. Similarity searches default to L2 distance or Cosine similarity. To query, load your database client, invoke query() passing a list of query_embeddings, and specify the number of nearest neighbors with n_results. Retrieve files dynamically based on distance thresholds."},
+{id:"doc-2",title:"Pydantic Field Constraints & Field Description",category:"docs",content:"Pydantic provides runtime validation and typing checks in Python. Users declare fields with normal annotations like name: str, age: int, or prices: list[float]. Use the Field() object to assert constraints. Numerical filters include gt (greater than), lt (less than), ge (greater/equal), and le. String filters include min_length and max_length bounds. When invalid inputs are provided, Pydantic raises a ValidationError containing the location 'loc' of the faulty parameter, 'msg' error detail, and the parameter 'type' category."},
+{id:"doc-3",title:"LLM Self-Correction Loops & Retry Logic",category:"docs",content:"Self-Correction is an agent pattern where structural parse errors from an LLM response are resolved. If an LLM returns JSON that fails a rigid Pydantic validator, the pipeline does not stop. Instead, generate a failure report outlining the ValidationError stack trace and return it to the LLM as a subsequent turn prompt. Feed back the invalid input, the failing schema rule, and the error location. The LLM re-analyzes its output, fixes values (such as correcting invalid emails or making numbers conform to limits), and produces fully passing JSON."},
+{id:"doc-4",title:"Google AI Studio Developer Settings & secrets",category:"code",content:"AI Studio secures keys inside Settings > Secrets. At runtime, the platform injects GEMINI_API_KEY into process.env. Developers must use server-side middleware (such as Express routes or Next endpoints) to execute requests. Do not expose keys to client assets, keeping the frontend keyless. The client issues requests directly to backend proxies using fetch() to execute generation operations securely."}];
+const PRESETS=[
+{name:"UserAccount",description:"System user registry item with age verification limits",fields:[
+ {name:"name",type:"string",description:"Full name",isRequired:true,minLength:3},
+ {name:"email",type:"string",description:"Valid email address",isRequired:true},
+ {name:"age",type:"integer",description:"User age count",isRequired:true,gt:0,lt:120},
+ {name:"skills",type:"array_string",description:"List of technical skills",isRequired:true}]},
+{name:"MedicalReport",description:"Structured patient diagnosis analysis item",fields:[
+ {name:"patient_name",type:"string",description:"Full name of patient",isRequired:true},
+ {name:"diagnosis",type:"string",description:"Primary physician diagnosis",isRequired:true,minLength:5},
+ {name:"severity",type:"string",description:"Severity category (Mild, Moderate, Severe)",isRequired:true},
+ {name:"follow_up_needed",type:"boolean",description:"Is subsequent testing and follow-up recommended",isRequired:true}]},
+{name:"SensorTelemetry",description:"High-frequency climate sensor packet",fields:[
+ {name:"sensor_id",type:"string",description:"Unique hardware string identifier",isRequired:true},
+ {name:"temperature",type:"number",description:"Ambient temperature in Celsius",isRequired:true,gt:-50,lt:100},
+ {name:"is_alert_active",type:"boolean",description:"Is the climate crossing hazardous thresholds",isRequired:true}]},
+{name:"KnowledgeChunk",description:"Pure Pydantic model representing structured text chunks in vector space",fields:[
+ {name:"chunk_id",type:"string",description:"Unique string key for this chunk",isRequired:true},
+ {name:"text_content",type:"string",description:"The raw segmented markdown, context, or code content chunk",isRequired:true},
+ {name:"metadata",type:"string",description:"Simple structured information tags associated with the source document",isRequired:true}]}];
+const clone=o=>JSON.parse(JSON.stringify(o));
+
+/* ---------- rag helpers ---------- */
+const rng=seed=>()=>{const x=Math.sin(seed++)*10000;return x-Math.floor(x)};
+const rd=rng(1337),PROJ=[0,1].map(()=>Array.from({length:768},()=>rd()*2-1));
+function project(e){
+  if(!e||!e.length)return{x:50,y:50};
+  let a=0,b=0;const n=Math.min(e.length,768);
+  for(let d=0;d<n;d++){a+=e[d]*PROJ[0][d];b+=e[d]*PROJ[1][d]}
+  const sq=v=>50+40*(v/(1+Math.abs(v)));
+  return{x:sq(a*1.5),y:sq(b*1.5)};
+}
+function chunkText(text,size,overlap){
+  const out=[];if(!text||size<=0)return out;
+  const ov=Math.max(0,Math.min(overlap,size-10,size*.5));let start=0;
+  while(start<text.length){
+    let end=start+size;
+    if(end<text.length){const from=Math.max(start,end-20),z=text.slice(from,Math.min(text.length,end+20)),sp=z.indexOf(" ");if(sp!==-1)end=from+sp}
+    else end=text.length;
+    const t=text.slice(start,end).trim();if(t)out.push(t);
+    if(end>=text.length)break;
+    start=end-Math.floor(ov);if(start>=end)start=end+1;
+  }
+  return out;
+}
+function cosine(a,b){
+  const n=Math.min(a.length,b.length);let d=0,x=0,y=0;
+  for(let i=0;i<n;i++){d+=a[i]*b[i];x+=a[i]*a[i];y+=b[i]*b[i]}
+  return x&&y?d/Math.sqrt(x*y):0;
+}
+function localEmbed(text){
+  const v=new Array(128).fill(0),w=text.toLowerCase().replace(/[^a-z0-9 ]/g,"").split(" ").filter(Boolean);
+  w.forEach(s=>{let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;for(let k=0;k<4;k++)v[Math.abs((h+k*17)%128)]+=1/Math.sqrt(w.length)});
+  const m=Math.sqrt(v.reduce((s,x)=>s+x*x,0))||1;return v.map(x=>x/m);
+}
+async function embed(texts){return texts.map(localEmbed)}
+
+/* ---------- state ---------- */
+const S={docs:clone(SAMPLE_DOCS),chunks:[],schemas:clone(PRESETS),active:"UserAccount",size:180,overlap:40,query:"",qvec:null,
+  results:[],sel:[],json:"",report:{isValid:true,errors:[]},logs:[],activeLog:null,flow:"idle",running:false,sim:false,
+  loading:false,indexed:false,version:"",api:false,build:0,selDoc:"doc-1",ragInit:false};
+const schema=()=>S.schemas.find(s=>s.name===S.active)||S.schemas[0];
+const stamp=()=>`v-${S.active}-${S.chunks.length}-${Date.now().toString(36)}`;
+
+/* ---------- validation (Pydantic-style) ---------- */
+function validate(str,sc){
+  if(!str||!str.trim())return{isValid:false,errors:[{loc:["root"],msg:"Empty input contents.",type:"value_error"}]};
+  let p;try{p=JSON.parse(str)}catch{return{isValid:false,errors:[{loc:["JSON_Parser"],msg:"Invalid JSON format: Syntactical parse error.",type:"syntax_error"}]}}
+  if(!p||typeof p!=="object"||Array.isArray(p))return{isValid:false,errors:[{loc:["root"],msg:"Input should be a valid object",type:"model_type"}]};
+  const errors=[];
+  sc.fields.forEach(f=>{
+    const v=p[f.name],e=(msg,type)=>errors.push({loc:[f.name],msg,type,inputReceived:v});
+    if(v===undefined||v===null){if(f.isRequired)e("Field required","missing");return}
+    if(f.type==="string"){
+      if(typeof v!=="string")e("Input should be a valid string","string_type");
+      else if(f.minLength!==undefined&&v.length<f.minLength)e(`String should have at least ${f.minLength} characters`,"string_too_short");
+    }else if(f.type==="integer"||f.type==="number"){
+      if(typeof v!=="number"||(f.type==="integer"&&!Number.isInteger(v)))e(`Input should be a valid ${f.type}`,`${f.type}_type`);
+      else{
+        if(f.gt!==undefined&&v<=f.gt)e(`Input should be greater than ${f.gt}`,"greater_than");
+        if(f.lt!==undefined&&v>=f.lt)e(`Input should be less than ${f.lt}`,"less_than");
+      }
+    }else if(f.type==="boolean"){if(typeof v!=="boolean")e("Input should be a valid boolean","bool_type")}
+    else if(f.type==="array_string"){
+      if(!Array.isArray(v))e("Input should be a valid list","list_type");
+      else if(v.some(x=>typeof x!=="string"))e("List elements must be valid strings","list_string_type");
+    }else if(f.type==="array_integer"){
+      if(!Array.isArray(v))e("Input should be a valid list","list_type");
+      else if(v.some(x=>!Number.isInteger(x)))e("List elements must be valid integers","list_integer_type");
+    }
+  });
+  return{isValid:!errors.length,errors,parsedOutput:errors.length?undefined:p};
+}
+const GOOD={name:"Douglas Adams",email:"arthur@hitchhiker.com",age:42,skills:["Trilogy Writing","Space Hitchhiking","Panic Management"],patient_name:"Arthur Dent",diagnosis:"Mild cosmic vertigo",severity:"Mild",follow_up_needed:false,sensor_id:"DHT22-CORE-3A",temperature:22.4,is_alert_active:false,chunk_id:"chunk-0",text_content:"Enter your knowledge text block here",metadata:'{"title": "Generic Document Title", "category": "general"}'};
+const BAD={name:"Ad",email:12345,age:-24,skills:"Expert in Python",patient_name:"",diagnosis:"Flu",severity:12,follow_up_needed:"Yes",sensor_id:"S",temperature:50000,is_alert_active:"Deactivated",chunk_id:null,text_content:13374242,metadata:false};
+const fallbackVal=f=>f.type==="string"?"Sample text":f.type==="integer"||f.type==="number"?(f.gt!==undefined?f.gt+1:10):f.type==="boolean"?true:[];
+const buildObj=(map,other)=>{const o={};schema().fields.forEach(f=>o[f.name]=f.name in map?map[f.name]:other(f));return o};
+function setJson(txt){S.json=txt;$("#json").value=txt;revalidate()}
+function revalidate(){S.report=validate(S.json,schema());renderReport();renderStats();renderRagLocks()}
+
+/* ---------- index build ---------- */
+let timer;const rebuildSoon=()=>{clearTimeout(timer);timer=setTimeout(rebuild,400)};
+async function rebuild(){
+  const id=++S.build;S.loading=true;S.indexed=false;S.version="";renderStats();renderRagLocks();
+  const items=[];
+  S.docs.forEach(d=>chunkText(d.content,S.size,S.overlap).forEach((t,i)=>items.push({id:`chunk-${d.id}-${i}`,docId:d.id,docTitle:d.title,index:i,text:t,wordCount:t.split(" ").filter(Boolean).length})));
+  const emb=items.length?await embed(items.map(i=>i.text)):[];
+  if(id!==S.build)return;
+  S.chunks=items.map((it,i)=>({...it,embedding:emb[i],...project(emb[i])}));
+  S.loading=false;S.indexed=true;S.version=stamp();
+  await runSearch(S.query);renderChroma();renderStats();renderRagLocks();
+}
+async function runSearch(q){
+  S.query=q;
+  if(!q.trim()){S.qvec=null;S.results=[];S.sel=[];return}
+  const [v]=await embed([q]);if(S.query!==q)return;
+  S.qvec=v;
+  S.results=S.chunks.map(c=>({chunk:c,score:cosine(v,c.embedding)})).sort((a,b)=>b.score-a.score);
+  S.sel=S.results.slice(0,2).map(r=>r.chunk.id);
+}
+
+/* ---------- render: header ---------- */
+function renderStats(){
+  $("#st-chunks").textContent=S.chunks.length;
+  $("#st-attrs").textContent=schema().fields.length+" attrs";
+  const v=$("#st-val");v.textContent=S.report.isValid?"Ready":"Trace!";
+  v.style.color=S.report.isValid?"#047857":"#d97706";v.className=S.report.isValid?"":"pulse";
+  const m=$("#mode");m.textContent=S.loading?"EMBEDDING...":S.api?"API EMBED":"LOCAL EMBED";
+}
+
+/* ---------- render: chroma ---------- */
+const dotColor=id=>id.includes("doc-2")||id.includes("doc-4")?"#f43f5e":id.includes("doc-3")?"#8b5cf6":"#10b981";
+function renderChroma(){
+  $("#cs").value=S.size;$("#co").value=S.overlap;$("#cs-v").textContent=S.size;$("#co-v").textContent=S.overlap;
+  if(!S.docs.some(d=>d.id===S.selDoc))S.selDoc=S.docs[0]?.id;
+  $("#doc-count").textContent=`Active documents (${S.docs.length})`;
+  $("#docs").innerHTML=S.docs.map(d=>`<div class="item ${d.id===S.selDoc?"sel":""}" data-doc="${esc(d.id)}"><div style="min-width:0"><div class="t">${esc(d.title)}</div><small>${d.category} &bull; ${d.content.length} chars</small></div>${S.docs.length>1?`<button class="ghost" data-del="${esc(d.id)}" style="color:inherit" aria-label="Delete ${esc(d.title)}">&#128465;</button>`:""}</div>`).join("");
+  const ad=S.docs.find(d=>d.id===S.selDoc);
+  $("#tracer-box").classList.toggle("hidden",!ad);
+  if(ad){$("#tr-title").textContent=ad.title;
+    $("#tracer").innerHTML=chunkText(ad.content,S.size,S.overlap).map((t,i)=>`<span class="ch ch${i%5}" title="Chunk #${i} (${t.length} chars, overlapping ${S.overlap} chars with neighbor)">${esc(t)}</span>`).join("")}
+  const qp=S.qvec?project(S.qvec):null;
+  let g="";for(let i=0;i<=10;i++){g+=`<line x1="${i*10}" y1="0" x2="${i*10}" y2="100" stroke="#fff" stroke-opacity=".06" stroke-width=".2"/><line x1="0" y1="${i*10}" x2="100" y2="${i*10}" stroke="#fff" stroke-opacity=".06" stroke-width=".2"/>`}
+  if(S.loading)g+=`<text x="50" y="50" fill="#a1a1aa" font-size="3.5" text-anchor="middle" font-family="monospace">Generating embeddings...</text>`;
+  else if(!S.chunks.length)g+=`<text x="50" y="50" fill="#71717a" font-size="3.5" text-anchor="middle" font-family="monospace">No vector chunks indexed</text>`;
+  else{
+    if(qp)S.sel.forEach(id=>{const c=S.chunks.find(x=>x.id===id);if(c)g+=`<line x1="${qp.x}" y1="${qp.y}" x2="${c.x}" y2="${c.y}" stroke="#0ea5e9" stroke-width=".4" stroke-dasharray="1 1"/>`});
+    S.chunks.forEach(c=>{const s=S.sel.includes(c.id);
+      g+=`<circle cx="${c.x}" cy="${c.y}" r="${s?2.5:1.8}" fill="${dotColor(c.id)}" opacity="${s?1:.6}"><title>${esc(c.docTitle)} #${c.index}</title></circle>`;
+      if(s)g+=`<circle cx="${c.x}" cy="${c.y}" r="4" fill="none" stroke="#0ea5e9" stroke-width=".3"/>`});
+    if(qp)g+=`<circle cx="${qp.x}" cy="${qp.y}" r="3.5" fill="#38bdf8"/><circle cx="${qp.x}" cy="${qp.y}" r="5" fill="none" stroke="#0ea5e9" stroke-width=".3"/>`;
+  }
+  $("#plot").innerHTML=g;$("#lg-q").classList.toggle("hidden",!qp);
+  $("#matches").innerHTML=!S.query.trim()?`<div class="empty"><b>EMPTY QUERY</b><br>Provide a search query to simulate ChromaDB cosine matching</div>`
+    :!S.results.length?`<div class="empty">Embedding vector query calculated...</div>`
+    :S.results.slice(0,3).map(({chunk,score},i)=>{const s=S.sel.includes(chunk.id);
+      return `<div class="item ${s?"sel":""}" style="display:block;cursor:default"><div class="row mono" style="justify-content:space-between;font-size:10px;font-weight:700"><span style="color:${s?"#93c5fd":"#2563eb"}">MATCH #${i+1}</span><span>cos: ${score.toFixed(3)}</span></div><p style="margin:6px 0;font-size:11px;font-weight:400;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(chunk.text)}</p>${s?`<small>&rsaquo; Injected as context</small>`:""}</div>`}).join("");
+  renderPrompt();
+}
+
+/* ---------- render: pydantic ---------- */
+function renderPydantic(){
+  const sc=schema();
+  $("#presets").innerHTML=PRESETS.map(p=>`<button data-preset="${p.name}" class="${p.name===S.active?"on":""}" style="font-size:9px;box-shadow:none;border-width:1px">${p.name}</button>`).join("");
+  $("#fields").innerHTML=sc.fields.map(f=>`<div class="item" style="cursor:default;background:var(--pale)"><div style="min-width:0"><div class="row mono" style="flex-wrap:wrap"><b style="font-size:12px">${esc(f.name)}</b><span class="tag k">${PY[f.type]}</span>${f.isRequired?'<span class="tag">required</span>':""}</div><div style="font-size:10px;opacity:.7">${esc(f.description)}</div><div class="row" style="margin-top:3px">${f.gt!==undefined?`<span class="tag">&gt; ${f.gt}</span>`:""}${f.lt!==undefined?`<span class="tag">&lt; ${f.lt}</span>`:""}${f.minLength!==undefined?`<span class="tag">min_char: ${f.minLength}</span>`:""}</div></div><button class="ghost" data-rm="${esc(f.name)}" aria-label="Remove ${esc(f.name)}">&#128465;</button></div>`).join("");
+  const lines=["from pydantic import BaseModel, Field","from typing import Optional","",`class ${sc.name}(BaseModel):`,'    """',`    ${sc.description}`,'    """'];
+  sc.fields.forEach(f=>{const p=[`description="${f.description}"`];
+    if(f.gt!==undefined)p.push(`gt=${f.gt}`);if(f.lt!==undefined)p.push(`lt=${f.lt}`);if(f.minLength!==undefined)p.push(`min_length=${f.minLength}`);
+    lines.push(f.isRequired?`    ${f.name}: ${PY[f.type]} = Field(${p.join(", ")})`:`    ${f.name}: Optional[${PY[f.type]}] = None`)});
+  $("#py").innerHTML=lines.map((l,i)=>{let s=esc(l);
+    s=/^(class|from|import)/.test(l)?s.replace(/\b(class|import|from)\b/g,'<i class="k">$1</i>'):s.replace(/\b(Field|Optional)\b/g,'<i class="f">$1</i>').replace(/\b(gt|lt|min_length|description)=/g,'<i class="p">$1</i>=');
+    return `<div><span class="ln">${i+1}</span>${s}</div>`}).join("");
+  renderCons();renderReport();
+}
+function renderCons(){
+  const t=$("#nf-t").value,c=(id,l,ph)=>`<div style="flex:1"><label class="lbl" for="${id}">${l}</label><input id="${id}" type="number" placeholder="${ph}"></div>`;
+  $("#nf-cons").innerHTML=t==="integer"||t==="number"?c("nf-gt","Gt (&gt; val)","e.g. 0")+c("nf-lt","Lt (&lt; val)","e.g. 100"):t==="string"?c("nf-ml","Min length","e.g. 3"):"";
+}
+function renderReport(){
+  const r=S.report,n=r.errors.length,name=schema().name;
+  $("#report").innerHTML=r.isValid?`<div class="ok"><b class="mono" style="font-size:11px;text-transform:uppercase">&#10003; Validation success (BaseModel passed)</b><p style="margin:4px 0 0;font-size:11px">The JSON conforms to the defined types and boundaries.</p></div>`
+  :`<div class="bad"><b class="mono" style="color:#dc2626;font-size:11px;text-transform:uppercase">Pydantic.ValidationError traceback</b><div class="dark scroll" style="padding:10px;margin-top:8px;max-height:170px"><div style="color:#71717a">&gt;&gt;&gt; ${name}.model_validate_json(input)</div><div style="color:#f87171;font-weight:700">ValidationError: ${n} validation error${n>1?"s":""} for ${name}</div>${r.errors.map(e=>`<div style="border-left:1px solid #ef444488;padding-left:12px;margin:6px 0"><div style="color:#fca5a5;font-weight:600">${esc(e.loc.join(" -> "))}</div><div style="color:#a1a1aa">${esc(e.msg)} <span style="opacity:.6">[${e.type}]</span></div>${e.inputReceived!==undefined?`<div style="color:#71717a;font-size:10px">Input received: <code style="color:#d4d4d8">${esc(JSON.stringify(e.inputReceived))}</code></div>`:""}</div>`).join("")}</div></div>`;
+}
+
+/* ---------- render: rag ---------- */
+const context=()=>{const s=S.chunks.filter(c=>S.sel.includes(c.id)),l=s.length?s:S.chunks.slice(0,2);return l.map(c=>`[Doc: ${c.docTitle}] ${c.text}`).join("\n\n")};
+function geminiSchema(){
+  const props={},required=[];
+  schema().fields.forEach(f=>{
+    const arr=f.type.startsWith("array_");
+    props[f.name]={type:arr?"array":f.type==="array_string"?"string":f.type,description:f.description,...(arr&&{items:{type:f.type==="array_integer"?"integer":"string"}})};
+    if(f.isRequired)required.push(f.name);
+  });
+  return{type:"object",properties:props,required};
+}
+const assembled=()=>`=== RETRIEVED CONTEXT ===\n${context()}\n\n=== USER CONSTRUCT INQUIRY ===\n${$("#rq").value||"Query information about matching structures."}\n\n=== PYDANTIC OUTPUT MODEL EXPECTATIONS ===\nJSON Schema defining expected structure:\n${JSON.stringify(geminiSchema(),null,2)}`;
+function renderPrompt(){
+  $("#prompt").innerHTML=assembled().split("\n").map(l=>`<div style="white-space:pre-wrap;word-break:break-all;${l.startsWith("===")?"color:#facc15;font-weight:700;margin-top:8px":/JSON Schema/.test(l)?"color:#38bdf8":""}">${esc(l)||"&nbsp;"}</div>`).join("");
+}
+const ready=()=>S.indexed&&S.version;
+function renderRagLocks(){
+  const ok=ready();
+  $("#sync").innerHTML=ok?`<div class="sync row" style="justify-content:space-between;flex-wrap:wrap"><div><b class="mono" style="text-transform:uppercase;font-size:11px">&#128737; Fully synchronized state</b><div class="mono" style="font-size:10px;opacity:.75">AppObjects are hydrated. Safe to execute against active index.</div></div><span class="tag" style="background:#ecfdf5;border-color:#10b981;color:#065f46;padding:3px 8px">ID: ${S.version}</span></div>`
+   :`<div class="amber row" style="justify-content:space-between;flex-wrap:wrap"><div><b class="mono" style="text-transform:uppercase;font-size:11px">&#9888; Database index desynchronized</b><div style="font-size:10px">Embeddings are rebuilding. The executor is idle until the index is ready.</div></div><b class="mono pulse" style="font-size:10px">REBUILDING...</b></div>`;
+  const b=$("#run");b.disabled=S.running||!ok;
+  b.innerHTML=S.running?`Running step: ${S.flow}`:!ok?"Executor locked: desynchronized":"&#9654; Run full-stack RAG pipeline";
+  $("#rq").disabled=$("#sim").disabled=S.running||!ok;
+}
+function renderFlow(){
+  $("#flow").innerHTML=[["retrieve","Chroma Retrieve"],["synthesize","LLM Generate"],["validate","Pydantic Check"],["correct","Correction Loop"],["done","Finished"]].map(([k,l])=>`<div class="${S.flow===k?"a":""}">${l}</div>`).join("");
+}
+const BADGE={success:["Passed","#d1fae5"],corrected:["Healed","#fef3c7"],validation_error:["Err","#fee2e2"],synthesizing:["Run...","#f3e8ff"],searching:["searching","#fff"]};
+function renderLogs(){
+  if(!S.logs.length){$("#logs").innerHTML=`<div class="empty"><b>PIPELINE LOGS EMPTY</b><br>Run a prompt to compile and validate live logs</div>`;return}
+  const a=S.logs.find(l=>l.id===S.activeLog);
+  $("#logs").innerHTML=S.logs.map(l=>{const [t,bg]=BADGE[l.status],on=l.id===S.activeLog;
+    return `<div class="item ${on?"sel":""}" data-log="${l.id}" style="display:block"><div class="row" style="justify-content:space-between"><small>${l.time}</small><span class="tag" style="background:${bg};color:var(--ink)">${t}</span></div><div class="mono" style="font-size:10px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&gt; ${esc(l.query)}</div><small style="text-transform:none">State ID: ${esc(l.state)}</small></div>`}).join("")
+  +(a&&a.raw?`<div style="border-top:2px solid var(--ink);padding-top:10px"><span class="lbl">LLM output details</span><pre class="dark" style="padding:10px;color:#34d399;max-height:190px;overflow:auto">${esc(a.raw)}</pre>${a.report.errors.length?`<div class="bad" style="margin-top:8px;font:10px 'JetBrains Mono',monospace;color:#7f1d1d">Self-correction prompt sent back to LLM for ${a.report.errors.length} failed properties.</div>`:""}</div>`:"");
+}
+
+/* ---------- RAG execution ---------- */
+function simResult(sc,fail){
+  const o={};
+  sc.fields.forEach(f=>{o[f.name]=fail?(f.type==="string"?"Ad":f.type==="integer"||f.type==="number"?-24:f.type==="boolean"?"NotABool":"NotAList")
+    :({name:"Arthur Dent",email:"dent@galaxy.org",age:42,skills:["Tea Brewing","Towel Management","Sandwich Making"],patient_name:"Jane Doe",diagnosis:"Semantic AI Playgrounds Overload",severity:"Mild",follow_up_needed:true,sensor_id:"DHT22-CORE-3A",temperature:22.4,is_alert_active:false,chunk_id:"chunk-0",text_content:"Enter your knowledge text block here",metadata:GOOD.metadata}[f.name]??(f.type==="string"?"Simulated text":f.type==="integer"||f.type==="number"?(f.gt!==undefined?f.gt+10:25):f.type==="boolean"?false:["Value"]))});
+  return JSON.stringify(o,null,2);
+}
+async function runRag(){
+  if(S.running||!ready())return;
+  S.running=true;const sc=schema(),query=$("#rq").value,prompt=assembled();
+  const log={id:"log-"+Date.now(),time:new Date().toLocaleTimeString(),query,state:S.version,raw:"",report:{isValid:false,errors:[]},status:"searching"};
+  S.logs.unshift(log);S.activeLog=log.id;
+  const step=async(f,ms)=>{S.flow=f;renderFlow();renderRagLocks();renderLogs();if(ms)await sleep(ms)};
+  await step("retrieve",1200);
+  log.status="synthesizing";await step("synthesize");
+  let raw;
+  raw=simResult(sc,S.sim);
+  log.raw=raw;renderLogs();
+  await step("validate",1000);
+  let rep=validate(raw,sc);setJson(raw);
+  log.report=rep;log.status=rep.isValid?"success":"validation_error";
+  if(!rep.isValid){
+    await step("correct",1500);
+    const fix=`=== PREVIOUS ATTEMPT FAILED SCHEMA VALIDATION ===\nYour previous output was:\n${raw}\n\n=== PYDANTIC VALIDATION REPORT ===\n${rep.errors.map(e=>`- Field: ${e.loc.join(" -> ")}, Issue: ${e.msg}`).join("\n")}\n\nRe-generate the data block so it passes all constraints. Output ONLY valid, parsable JSON.`;
+    log.status="synthesizing";renderLogs();
+    const fixed=simResult(sc,false);
+    rep=validate(fixed,sc);setJson(fixed);
+    Object.assign(log,{raw:fixed,report:rep,status:rep.isValid?"corrected":"validation_error"});
+  }
+  S.flow="done";S.running=false;renderFlow();renderRagLocks();renderLogs();
+}
+
+/* ---------- schema + defaults ---------- */
+const DEFAULTS={UserAccount:["Retrieve Arthur Dent from knowledge bases and compile his profile","Arthur Dent"],MedicalReport:["Extract Jane Doe's clinical medical record file","Jane Doe medical file"],KnowledgeChunk:["Extract structured metadata and text content from the database manual doc-1","ChromaDB Quickstart"]};
+async function applyDefaults(){
+  const [p,q]=DEFAULTS[S.active]||["Extract DHT22 sensor readings details","DHT22 climate readings"];
+  $("#rq").value=p;$("#q").value=q;await runSearch(q);renderChroma();
+}
+function loadPassing(){setJson(JSON.stringify(buildObj(GOOD,fallbackVal),null,2))}
+async function selectSchema(name){
+  S.active=name;renderPydantic();loadPassing();renderStats();await applyDefaults();
+}
+
+/* ---------- events ---------- */
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("on",x===b));
+  ["chroma","pydantic","rag"].forEach(t=>$("#tab-"+t).classList.toggle("hidden",t!==b.dataset.tab));
+  if(b.dataset.tab==="rag"&&!S.ragInit){S.ragInit=true;applyDefaults()}
+  if(b.dataset.tab==="rag")renderPrompt();
+});
+$("#cs").oninput=e=>{S.size=+e.target.value;$("#cs-v").textContent=S.size;rebuildSoon()};
+$("#co").oninput=e=>{S.overlap=+e.target.value;$("#co-v").textContent=S.overlap;rebuildSoon()};
+let qt;$("#q").oninput=e=>{clearTimeout(qt);qt=setTimeout(async()=>{await runSearch(e.target.value);renderChroma()},250)};
+$("#docs").onclick=e=>{
+  const del=e.target.closest("[data-del]");
+  if(del){e.stopPropagation();S.docs=S.docs.filter(d=>d.id!==del.dataset.del);renderChroma();rebuild();return}
+  const it=e.target.closest("[data-doc]");if(it){S.selDoc=it.dataset.doc;renderChroma()}
+};
+$("#add-doc").onsubmit=e=>{e.preventDefault();
+  S.docs.push({id:"doc-"+Date.now(),title:$("#nd-t").value.trim(),content:$("#nd-c").value.trim(),category:$("#nd-k").value});
+  $("#nd-t").value=$("#nd-c").value="";renderChroma();rebuild()};
+$("#presets").onclick=e=>{const p=e.target.dataset.preset;if(p)selectSchema(p)};
+$("#fields").onclick=e=>{
+  const n=e.target.closest("[data-rm]")?.dataset.rm;if(!n)return;
+  const sc=schema();if(sc.fields.length<=1)return alert("A Pydantic schema BaseModel must contain at least one parameter field.");
+  sc.fields=sc.fields.filter(f=>f.name!==n);renderPydantic();revalidate();renderPrompt()};
+$("#nf-t").onchange=renderCons;
+$("#add-field").onsubmit=e=>{e.preventDefault();
+  const name=$("#nf-n").value.trim().toLowerCase().replace(/[^a-z0-9_]/g,""),sc=schema();
+  if(!name)return;if(sc.fields.some(f=>f.name===name))return alert("A property with this name already exists in the BaseModel schema.");
+  const f={name,type:$("#nf-t").value,description:$("#nf-d").value||`The ${name} data node`,isRequired:$("#nf-r").checked};
+  const v=id=>$(id)?.value!==""&&$(id)?Number($(id).value):undefined;
+  if(v("#nf-gt")!==undefined)f.gt=v("#nf-gt");if(v("#nf-lt")!==undefined)f.lt=v("#nf-lt");if(v("#nf-ml")!==undefined)f.minLength=v("#nf-ml");
+  sc.fields.push(f);$("#nf-n").value=$("#nf-d").value="";renderPydantic();revalidate();renderPrompt()};
+$("#b-ok").onclick=loadPassing;
+$("#b-bad").onclick=()=>setJson(JSON.stringify(buildObj(BAD,()=>null),null,2));
+$("#json").oninput=e=>{S.json=e.target.value;revalidate()};
+$("#rq").oninput=renderPrompt;
+$("#sim").onchange=e=>S.sim=e.target.checked;
+$("#run").onclick=runRag;
+$("#logs").onclick=e=>{const l=e.target.closest("[data-log]");if(l){S.activeLog=l.dataset.log;renderLogs()}};
+$("#clear").onclick=()=>{S.logs=[];S.activeLog=null;S.flow="idle";renderFlow();renderLogs()};
+$("#refresh").onclick=async()=>{
+  const p=clone(PRESETS.find(x=>x.name==="KnowledgeChunk"));
+  S.schemas=S.schemas.map(s=>s.name===p.name?p:s);S.active=p.name;S.sel=[];
+  $("#q").value="ChromaDB Quickstart";
+  setJson(JSON.stringify({chunk_id:"chunk-0",text_content:"Enter your knowledge text block here",metadata:GOOD.metadata},null,2));
+  document.querySelector('[data-tab="pydantic"]').click();renderPydantic();renderStats();
+  await runSearch("ChromaDB Quickstart");renderChroma();
+};
+
+/* ---------- boot ---------- */
+renderChroma();renderPydantic();renderFlow();renderLogs();renderRagLocks();loadPassing();renderPrompt();
+$("#rq").value=DEFAULTS.UserAccount[0];renderPrompt();rebuild();
+</script>
+</body>
+</html>
